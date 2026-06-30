@@ -1,5 +1,6 @@
 streamlit
-scikit-learn
 pandas
-numpy
-plotly.express
+pickle-mixin
+scikit-learn
+plotly
+openpyxl
