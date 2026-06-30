@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import pickle
 import os
-import plotly.express as px  # Ditambahkan untuk visualisasi yang jauh lebih interaktif
+import plotly.express as px
 
 # --- 1. SET KONFIGURASI HALAMAN ---
 st.set_page_config(
@@ -12,16 +12,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. CUSTOM CSS UNTUK UI MODERN (10X BETTER LOOK) ---
+# --- 2. CUSTOM CSS UNTUK UI MODERN ---
 st.markdown("""
     <style>
-    /* Mengubah font global dan background soft */
     .main {
         background-color: #f8f9fa;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    
-    /* Styling Card untuk metrics & hasil */
     .custom-card {
         background-color: #ffffff;
         padding: 24px;
@@ -30,8 +27,6 @@ st.markdown("""
         margin-bottom: 20px;
         border-left: 5px solid #4F46E5;
     }
-    
-    /* Styling Header */
     .main-title {
         font-size: 2.5rem;
         font-weight: 800;
@@ -43,8 +38,6 @@ st.markdown("""
         color: #4B5563;
         margin-bottom: 25px;
     }
-    
-    /* Modifikasi tab active indicator */
     .stTabs [data-baseweb="tab"] {
         font-size: 16px;
         font-weight: 600;
@@ -58,8 +51,6 @@ st.markdown("""
         color: #4F46E5 !important;
         border-bottom-color: #4F46E5 !important;
     }
-    
-    /* Tombol Utama */
     div.stButton > button:first-child {
         background-color: #4F46E5;
         color: white;
@@ -94,19 +85,19 @@ def load_models():
 
 tfidf_model, knn_model = load_models()
 
-# --- 4. SIDEBAR PANEL (EFEKTIF UNTUK STATS & INFO MODEL) ---
+# --- 4. SIDEBAR PANEL (DISEDERHANAKAN AGAR TIDAK PADAT) ---
 with st.sidebar:
-    st.markdown("### ⚙️ Informasi Model")
-    st.info("Aplikasi ini menggunakan pipeline Machine Learning untuk mengklasifikasikan ulasan secara otomatis.")
+    st.markdown("### ⚙️ Panel Navigasi")
+    st.caption("Sentimen Sistem v2.0 • Dioptimalkan untuk Skripsi")
+    st.markdown("---")
     
-    st.markdown("---")
-    st.markdown("**Spesifikasi Sistem:**")
-    st.markdown("- **Ekstraksi Fitur:** `TF-IDF Vectorizer`")
-    st.markdown("- **Algoritma:** `K-Nearest Neighbor`")
-    st.markdown("- **Hyperparameter:** `$K = 7$`")
-    st.markdown("- **Format Output CSV:** `1` (Positif) & `0` (Negatif)")
-    st.markdown("---")
-    st.caption("Sentimen Sistem v2.0 • Dioptimalkan untuk Vacuum Cleaner")
+    # Membungkus informasi panjang ke dalam Expander agar ringkas
+    with st.sidebar.expander("ℹ️ Spesifikasi Model & Sistem", expanded=False):
+        st.markdown("- **Ekstraksi Fitur:** `TF-IDF Vectorizer`")
+        st.markdown("- **Algoritma Klasifikasi:** `K-Nearest Neighbor`")
+        st.markdown("- **Hyperparameter:** Teroptimasi pada `$K = 7$`")
+        st.markdown("- **Metrik Jarak:** `Cosine Similarity`")
+        st.markdown("- **Kategori Label:** `Sentimen Positif` & `Sentimen Negatif`")
 
 # --- 5. HEADER UTAMA ---
 st.markdown('<p class="main-title">🧹 Sentiment Analytics Dashboard</p>', unsafe_allow_html=True)
@@ -145,20 +136,20 @@ else:
             
             if btn_analisis:
                 if ulasan_user.strip() == "":
-                    st.toast("Isi teks ulasannya dulu ya, bro!", icon="⚠️")
+                    st.toast("Isi teks ulasannya dulu ya!", icon="⚠️")
                 else:
-                    with st.spinner("Mengkalkulasi matriks jarak Jaccard/Euclidean..."):
+                    with st.spinner("Mengkalkulasi matriks jarak kedekatan..."):
                         # Transformasi & Prediksi
                         vektor_teks = tfidf_model.transform([ulasan_user])
                         prediksi = knn_model.predict(vektor_teks)[0]
                         
-                        # Tampilan Berdasarkan Hasil Prediksi (1 = Positif, 0 = Negatif)
+                        # Tampilan Hasil Prediksi Berdasarkan Konsistensi Laporan (Positif / Negatif)
                         if prediksi == 1:
                             st.markdown("""
                             <div class="custom-card" style="border-left: 5px solid #10B981; background-color: #F0FDF4;">
                                 <h3 style='color: #065F46; margin:0;'>🟢 SENTIMEN POSITIF</h3>
                                 <p style='color: #047857; font-size:14px; margin-top:8px;'>
-                                Konsumen puas dengan performa produk. Indikator mencakup aspek kualitas, efisiensi fungsional, atau pengiriman cepat.
+                                Konsumen puas dengan performa produk. Indikator mencakup aspek kualitas, efisiensi fungsional, atau pelayanan vendor yang baik.
                                 </p>
                             </div>
                             """, unsafe_allow_html=True)
@@ -168,12 +159,12 @@ else:
                             <div class="custom-card" style="border-left: 5px solid #EF4444; background-color: #FEF2F2;">
                                 <h3 style='color: #991B1B; margin:0;'>🔴 SENTIMEN NEGATIF</h3>
                                 <p style='color: #B91C1C; font-size:14px; margin-top:8px;'>
-                                Terdeteksi keluhan komplain pembeli. Segera evaluasi kecacatan produk atau layanan logistik vendor.
+                                Terdeteksi keluhan atau komplain pembeli. Segera evaluasi kecacatan produk, performa daya, atau layanan logistik.
                                 </p>
                             </div>
                             """, unsafe_allow_html=True)
             else:
-                st.info("Silakan ketik teks di sebelah kiri lalu klik tombol analisis untuk melihat hasil perkiraan klasifikasi.")
+                st.info("Silakan ketik teks di sebelah kiri lalu klik tombol analisis untuk melihat hasil perkiraan klasifikasi formal.")
 
     # ==========================================
     # TAB 2: ANALISIS MASSAL (BATCH PROCESSING)
@@ -187,7 +178,6 @@ else:
         uploaded_file = st.file_uploader("Unggah dataset ulasan Anda:", type=['csv', 'xlsx'], label_visibility="collapsed")
         
         if uploaded_file is not None:
-            # Baca file secara aman
             if uploaded_file.name.endswith('.csv'):
                 df_batch = pd.read_csv(uploaded_file)
             else:
@@ -195,7 +185,6 @@ else:
                 
             st.markdown("---")
             
-            # Layout pembagian konfigurasi kolom dan preview
             c_conf, c_prev = st.columns([0.8, 1.2], gap="medium")
             
             with c_conf:
@@ -205,39 +194,35 @@ else:
                 btn_batch = st.button("Eksekusi Klasifikasi Massal", key="btn_batch")
                 
             with c_prev:
-                st.markdown("##### 📄 Cuplikan Data (Top 3 Baris)")
+                st.markdown("##### 📄 Cuplikan Data Awal")
                 st.dataframe(df_batch.head(3), use_container_width=True)
                 
             if btn_batch:
                 with st.spinner("Sedang memproses seluruh baris data via KNN..."):
-                    # Bersihkan NaN khusus pada kolom target ulasan
                     df_clean = df_batch.dropna(subset=[nama_kolom]).copy()
                     
                     # Prediksi Massal
                     fitur_batch = tfidf_model.transform(df_clean[nama_kolom].astype(str))
                     hasil_prediksi_batch = knn_model.predict(fitur_batch)
                     
-                    # Mapping Hasil ke DataFrame (1: Positif, 0: Negatif)
-                    df_clean['Hasil_Prediksi_Sentimen'] = hasil_prediksi_batch
-                    df_clean['Status_Sentimen'] = df_clean['Hasil_Prediksi_Sentimen'].map({1: 'Positif', 0: 'Negatif'})
+                    # Mapping Hasil Menggunakan Istilah Bahasa Formal Laporan
+                    df_clean['Status_Sentimen'] = ['Positif' if x == 1 else 'Negatif' for x in hasil_prediksi_batch]
                     
                     st.markdown("---")
                     st.markdown("### 📊 Laporan Hasil Analisis Batch")
                     
-                    # Metrics Modern Cards
                     total_data = len(df_clean)
-                    total_positif = int((df_clean['Hasil_Prediksi_Sentimen'] == 1).sum())
-                    total_negatif = int((df_clean['Hasil_Prediksi_Sentimen'] == 0).sum())
+                    total_positif = int((df_clean['Status_Sentimen'] == 'Positif').sum())
+                    total_negatif = int((df_clean['Status_Sentimen'] == 'Negatif').sum())
                     
                     m1, m2, m3 = st.columns(3)
                     with m1:
                         st.markdown(f'<div class="custom-card"><h5>📦 Total Data</h5><h2>{total_data} <span style="font-size:14px;color:#6B7280;">Ulasan</span></h2></div>', unsafe_allow_html=True)
                     with m2:
-                        st.markdown(f'<div class="custom-card" style="border-left:5px solid #10B981"><h5>🟢 Sentimen Positif (1)</h5><h2>{total_positif} <span style="font-size:14px;color:#10B981;">({(total_positif/total_data)*100:.1f}%)</span></h2></div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="custom-card" style="border-left:5px solid #10B981"><h5>🟢 Sentimen Positif</h5><h2>{total_positif} <span style="font-size:14px;color:#10B981;">({(total_positif/total_data)*100:.1f}%)</span></h2></div>', unsafe_allow_html=True)
                     with m3:
-                        st.markdown(f'<div class="custom-card" style="border-left:5px solid #EF4444"><h5>🔴 Sentimen Negatif (0)</h5><h2>{total_negatif} <span style="font-size:14px;color:#EF4444;">({(total_negatif/total_data)*100:.1f}%)</span></h2></div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="custom-card" style="border-left:5px solid #EF4444"><h5>🔴 Sentimen Negatif</h5><h2>{total_negatif} <span style="font-size:14px;color:#EF4444;">({(total_negatif/total_data)*100:.1f}%)</span></h2></div>', unsafe_allow_html=True)
                     
-                    # Grafik Distribusi & Detail Data Grid
                     g_chart, g_table = st.columns([1, 1], gap="large")
                     
                     with g_chart:
@@ -245,7 +230,6 @@ else:
                         df_counts = df_clean['Status_Sentimen'].value_counts().reset_index()
                         df_counts.columns = ['Sentimen', 'Jumlah']
                         
-                        # Menggunakan Plotly Pie Chart agar jauh lebih interaktif dan estetik dibanding bar_chart standar
                         fig = px.pie(
                             df_counts, 
                             values='Jumlah', 
@@ -259,14 +243,11 @@ else:
                         
                     with g_table:
                         st.markdown("##### 📋 Tabel Output Prediksi")
-                        # Menampilkan teks ulasan asli, kode angka hasil prediksi, dan label teksnya
-                        st.dataframe(
-                            df_clean[[nama_kolom, 'Hasil_Prediksi_Sentimen', 'Status_Sentimen']], 
-                            use_container_width=True, 
-                            height=260
-                        )
+                        # HANYA menampilkan kolom ulasan utama dan hasil pelabelan teks agar ringkas & bersih
+                        df_display = df_clean[[nama_kolom, 'Status_Sentimen']]
+                        st.dataframe(df_display, use_container_width=True, height=260)
                         
-                    # Sediakan tombol download hasil download CSV
+                    # Tombol download berkas CSV hasil prediksi
                     csv_data = df_clean.to_csv(index=False).encode('utf-8')
                     st.download_button(
                         label="📥 Unduh Seluruh Hasil Analisis (.csv)",
