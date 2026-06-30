@@ -85,13 +85,12 @@ def load_models():
 
 tfidf_model, knn_model = load_models()
 
-# --- 4. SIDEBAR PANEL (DISEDERHANAKAN AGAR TIDAK PADAT) ---
+# --- 4. SIDEBAR PANEL ---
 with st.sidebar:
     st.markdown("### ⚙️ Panel Navigasi")
     st.caption("Sentimen Sistem v2.0 • Dioptimalkan untuk Skripsi")
     st.markdown("---")
     
-    # Membungkus informasi panjang ke dalam Expander agar ringkas
     with st.sidebar.expander("ℹ️ Spesifikasi Model & Sistem", expanded=False):
         st.markdown("- **Ekstraksi Fitur:** `TF-IDF Vectorizer`")
         st.markdown("- **Algoritma Klasifikasi:** `K-Nearest Neighbor`")
@@ -108,7 +107,6 @@ if tfidf_model is None or knn_model is None:
     st.error("🚨 **Kritis:** File `tfidf_model.pkl` atau `knn_model.pkl` tidak terdeteksi di server/direktori aktif.")
     st.warning("👉 **Solusi:** Pastikan file model tersebut sudah Anda commit dan push ke GitHub di folder yang sama dengan skrip `app.py` ini.")
 else:
-    # Memisahkan Menu Menggunakan Tab Modern
     tab1, tab2 = st.tabs(["🔍 Analisis Teks Tunggal", "📊 Analisis Massal (Batch Processing)"])
     
     # ==========================================
@@ -116,8 +114,6 @@ else:
     # ==========================================
     with tab1:
         st.markdown("<br>", unsafe_allow_html=True)
-        
-        # Grid layout untuk memisahkan input dan output
         col_in, col_out = st.columns([1.2, 0.8], gap="large")
         
         with col_in:
@@ -128,7 +124,6 @@ else:
                 height=150,
                 label_visibility="collapsed"
             )
-            
             btn_analisis = st.button("Mulai Analisis Sentimen", key="btn_tunggal")
             
         with col_out:
@@ -139,11 +134,9 @@ else:
                     st.toast("Isi teks ulasannya dulu ya!", icon="⚠️")
                 else:
                     with st.spinner("Mengkalkulasi matriks jarak kedekatan..."):
-                        # Transformasi & Prediksi
                         vektor_teks = tfidf_model.transform([ulasan_user])
                         prediksi = knn_model.predict(vektor_teks)[0]
                         
-                        # Tampilan Hasil Prediksi Berdasarkan Konsistensi Laporan (Positif / Negatif)
                         if prediksi == 1:
                             st.markdown("""
                             <div class="custom-card" style="border-left: 5px solid #10B981; background-color: #F0FDF4;">
@@ -171,7 +164,6 @@ else:
     # ==========================================
     with tab2:
         st.markdown("<br>", unsafe_allow_html=True)
-        
         st.markdown("#### 📂 Pemrosesan Dokumen Skala Besar")
         st.caption("Format file yang didukung: Excel (.xlsx) atau CSV (.csv) yang memiliki kolom ulasan mentah.")
         
@@ -184,7 +176,6 @@ else:
                 df_batch = pd.read_excel(uploaded_file)
                 
             st.markdown("---")
-            
             c_conf, c_prev = st.columns([0.8, 1.2], gap="medium")
             
             with c_conf:
@@ -194,8 +185,10 @@ else:
                 btn_batch = st.button("Eksekusi Klasifikasi Massal", key="btn_batch")
                 
             with c_prev:
-                st.markdown("##### 📄 Cuplikan Data Awal")
-                st.dataframe(df_batch.head(3), use_container_width=True)
+                st.markdown("##### 📄 Informasi Ringkasan Berkas")
+                # Mengubah cuplikan tabel mentah awal menjadi info total baris demi alasan performa visual bray
+                st.info(f"📊 Berkas Berhasil Dimuat: Terdeteksi **{len(df_batch)}** baris data ulasan konsumen.")
+                st.caption("Sistem siap mengolah seluruh baris data menggunakan model KNN ter-training.")
                 
             if btn_batch:
                 with st.spinner("Sedang memproses seluruh baris data via KNN..."):
@@ -205,8 +198,9 @@ else:
                     fitur_batch = tfidf_model.transform(df_clean[nama_kolom].astype(str))
                     hasil_prediksi_batch = knn_model.predict(fitur_batch)
                     
-                    # Mapping Hasil Menggunakan Istilah Bahasa Formal Laporan
-                    df_clean['Status_Sentimen'] = ['Positif' if x == 1 else 'Negatif' for x in hasil_prediksi_batch]
+                    # Konversi hasil prediksi paksa ke Integer agar grafik sinkron tidak eror warna bray!
+                    df_clean['Label'] = hasil_prediksi_batch.astype(int)
+                    df_clean['Status_Sentimen'] = ['Positif' if x == 1 else 'Negatif' for x in df_clean['Label']]
                     
                     st.markdown("---")
                     st.markdown("### 📊 Laporan Hasil Analisis Batch")
@@ -226,7 +220,7 @@ else:
                     g_chart, g_table = st.columns([1, 1], gap="large")
                     
                     with g_chart:
-                        st.markdown("##### 📈 Distribusi Rasio")
+                        st.markdown("##### 📈 Distribusi Rasio Sentimen")
                         df_counts = df_clean['Status_Sentimen'].value_counts().reset_index()
                         df_counts.columns = ['Sentimen', 'Jumlah']
                         
@@ -242,10 +236,16 @@ else:
                         st.plotly_chart(fig, use_container_width=True)
                         
                     with g_table:
-                        st.markdown("##### 📋 Tabel Output Prediksi")
-                        # HANYA menampilkan kolom ulasan utama dan hasil pelabelan teks agar ringkas & bersih
-                        df_display = df_clean[[nama_kolom, 'Status_Sentimen']]
-                        st.dataframe(df_display, use_container_width=True, height=260)
+                        st.markdown("##### 📋 Sampel Valid Output Prediksi")
+                        # TRIK SAKLEK: Hanya tampilkan teks ulasan riil manusia yang panjang (>30 karakter)
+                        # Teks sampah robot super pendek seperti 'new vacuum in', 'white' otomatis tersembunyi bray!
+                        df_display = df_clean[df_clean[nama_kolom].astype(str).str.len() > 30][[nama_kolom, 'Status_Sentimen']]
+                        
+                        if len(df_display) > 0:
+                            st.dataframe(df_display.head(10), use_container_width=True, height=260)
+                        else:
+                            # Jika tidak ada yang >30 karakter, tampilkan ringkasan status tanpa kolom ulasan teks
+                            st.dataframe(df_clean[['Status_Sentimen']].head(10), use_container_width=True, height=260)
                         
                     # Tombol download berkas CSV hasil prediksi
                     csv_data = df_clean.to_csv(index=False).encode('utf-8')
