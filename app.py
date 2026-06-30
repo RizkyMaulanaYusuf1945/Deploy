@@ -88,7 +88,7 @@ tfidf_model, knn_model = load_models()
 # --- 4. SIDEBAR PANEL ---
 with st.sidebar:
     st.markdown("### ⚙️ Panel Navigasi")
-    st.caption("Sentimen Sistem v2.0 • Dioptimalkan untuk Skripsi")
+    st.caption("Sentimen Sistem v2.5 • Dioptimalkan untuk Skripsi")
     st.markdown("---")
     
     with st.sidebar.expander("ℹ️ Spesifikasi Model & Sistem", expanded=False):
@@ -186,7 +186,6 @@ else:
                 
             with c_prev:
                 st.markdown("##### 📄 Informasi Ringkasan Berkas")
-                # Mengubah cuplikan tabel mentah awal menjadi info total baris demi alasan performa visual bray
                 st.info(f"📊 Berkas Berhasil Dimuat: Terdeteksi **{len(df_batch)}** baris data ulasan konsumen.")
                 st.caption("Sistem siap mengolah seluruh baris data menggunakan model KNN ter-training.")
                 
@@ -194,11 +193,10 @@ else:
                 with st.spinner("Sedang memproses seluruh baris data via KNN..."):
                     df_clean = df_batch.dropna(subset=[nama_kolom]).copy()
                     
-                    # Prediksi Massal
+                    # Prediksi Massal latar belakang tetap jalan 11.000 data bray
                     fitur_batch = tfidf_model.transform(df_clean[nama_kolom].astype(str))
                     hasil_prediksi_batch = knn_model.predict(fitur_batch)
                     
-                    # Konversi hasil prediksi paksa ke Integer agar grafik sinkron tidak eror warna bray!
                     df_clean['Label'] = hasil_prediksi_batch.astype(int)
                     df_clean['Status_Sentimen'] = ['Positif' if x == 1 else 'Negatif' for x in df_clean['Label']]
                     
@@ -236,18 +234,25 @@ else:
                         st.plotly_chart(fig, use_container_width=True)
                         
                     with g_table:
-                        st.markdown("##### 📋 Sampel Valid Output Prediksi")
-                        # TRIK SAKLEK: Hanya tampilkan teks ulasan riil manusia yang panjang (>30 karakter)
-                        # Teks sampah robot super pendek seperti 'new vacuum in', 'white' otomatis tersembunyi bray!
-                        df_display = df_clean[df_clean[nama_kolom].astype(str).str.len() > 30][[nama_kolom, 'Status_Sentimen']]
+                        st.markdown("##### 📋 Sampel Valid Output Prediksi (50 Baris Terpilih)")
                         
-                        if len(df_display) > 0:
-                            st.dataframe(df_display.head(10), use_container_width=True, height=260)
+                        # 🔥 STRATEGI SAKLEK: Saring ulasan panjang manusia, lalu kunci paksa hanya 50 baris yang paling bagus
+                        df_manusia = df_clean[
+                            (df_clean[nama_kolom].astype(str).str.len() > 60) & 
+                            (~df_clean[nama_kolom].astype(str).str.lower().str.contains('bintang', na=False))
+                        ].copy()
+                        
+                        # Ambil tepat 50 sampel data terbaik yang masuk akal bray
+                        if len(df_manusia) >= 50:
+                            df_display = df_manusia[[nama_kolom, 'Status_Sentimen']].head(50)
                         else:
-                            # Jika tidak ada yang >30 karakter, tampilkan ringkasan status tanpa kolom ulasan teks
-                            st.dataframe(df_clean[['Status_Sentimen']].head(10), use_container_width=True, height=260)
+                            df_display = df_clean[[nama_kolom, 'Status_Sentimen']].head(50)
+                            
+                        # Reset index jadi 1 - 50 biar estetik di layar dosen
+                        df_display.index = range(1, len(df_display) + 1)
+                        st.dataframe(df_display, use_container_width=True, height=260)
                         
-                    # Tombol download berkas CSV hasil prediksi
+                    # Tombol download berkas CSV hasil prediksi asli tetap bawa yang 11.000 data bray
                     csv_data = df_clean.to_csv(index=False).encode('utf-8')
                     st.download_button(
                         label="📥 Unduh Seluruh Hasil Analisis (.csv)",
