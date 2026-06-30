@@ -104,7 +104,7 @@ with st.sidebar:
     st.markdown("- **Ekstraksi Fitur:** `TF-IDF Vectorizer`")
     st.markdown("- **Algoritma:** `K-Nearest Neighbor`")
     st.markdown("- **Hyperparameter:** `$K = 7$`")
-    st.markdown("- **Sumber Data:** Shopee Scraper")
+    st.markdown("- **Format Output CSV:** `1` (Positif) & `0` (Negatif)")
     st.markdown("---")
     st.caption("Sentimen Sistem v2.0 • Dioptimalkan untuk Vacuum Cleaner")
 
@@ -152,7 +152,7 @@ else:
                         vektor_teks = tfidf_model.transform([ulasan_user])
                         prediksi = knn_model.predict(vektor_teks)[0]
                         
-                        # Tampilan Berdasarkan Hasil Prediksi
+                        # Tampilan Berdasarkan Hasil Prediksi (1 = Positif, 0 = Negatif)
                         if prediksi == 1:
                             st.markdown("""
                             <div class="custom-card" style="border-left: 5px solid #10B981; background-color: #F0FDF4;">
@@ -217,7 +217,7 @@ else:
                     fitur_batch = tfidf_model.transform(df_clean[nama_kolom].astype(str))
                     hasil_prediksi_batch = knn_model.predict(fitur_batch)
                     
-                    # Mapping Hasil
+                    # Mapping Hasil ke DataFrame (1: Positif, 0: Negatif)
                     df_clean['Hasil_Prediksi_Sentimen'] = hasil_prediksi_batch
                     df_clean['Status_Sentimen'] = df_clean['Hasil_Prediksi_Sentimen'].map({1: 'Positif', 0: 'Negatif'})
                     
@@ -233,9 +233,9 @@ else:
                     with m1:
                         st.markdown(f'<div class="custom-card"><h5>📦 Total Data</h5><h2>{total_data} <span style="font-size:14px;color:#6B7280;">Ulasan</span></h2></div>', unsafe_allow_html=True)
                     with m2:
-                        st.markdown(f'<div class="custom-card" style="border-left:5px solid #10B981"><h5>🟢 Sentimen Positf</h5><h2>{total_positif} <span style="font-size:14px;color:#10B981;">({(total_positif/total_data)*100:.1f}%)</span></h2></div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="custom-card" style="border-left:5px solid #10B981"><h5>🟢 Sentimen Positif (1)</h5><h2>{total_positif} <span style="font-size:14px;color:#10B981;">({(total_positif/total_data)*100:.1f}%)</span></h2></div>', unsafe_allow_html=True)
                     with m3:
-                        st.markdown(f'<div class="custom-card" style="border-left:5px solid #EF4444"><h5>🔴 Sentimen Negatif</h5><h2>{total_negatif} <span style="font-size:14px;color:#EF4444;">({(total_negatif/total_data)*100:.1f}%)</span></h2></div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="custom-card" style="border-left:5px solid #EF4444"><h5>🔴 Sentimen Negatif (0)</h5><h2>{total_negatif} <span style="font-size:14px;color:#EF4444;">({(total_negatif/total_data)*100:.1f}%)</span></h2></div>', unsafe_allow_html=True)
                     
                     # Grafik Distribusi & Detail Data Grid
                     g_chart, g_table = st.columns([1, 1], gap="large")
@@ -259,8 +259,9 @@ else:
                         
                     with g_table:
                         st.markdown("##### 📋 Tabel Output Prediksi")
+                        # Menampilkan teks ulasan asli, kode angka hasil prediksi, dan label teksnya
                         st.dataframe(
-                            df_clean[[nama_kolom, 'Status_Sentimen']], 
+                            df_clean[[nama_kolom, 'Hasil_Prediksi_Sentimen', 'Status_Sentimen']], 
                             use_container_width=True, 
                             height=260
                         )
