@@ -3,6 +3,7 @@ import pandas as pd
 import pickle
 import os
 import plotly.express as px
+import numpy as np
 
 # --- 1. SET KONFIGURASI HALAMAN ---
 st.set_page_config(
@@ -88,7 +89,7 @@ tfidf_model, knn_model = load_models()
 # --- 4. SIDEBAR PANEL ---
 with st.sidebar:
     st.markdown("### ⚙️ Panel Navigasi")
-    st.caption("Sentimen Sistem v3.0 • Dioptimalkan untuk Skripsi")
+    st.caption("Sentimen Sistem v4.5 • Filter Akurat 20 Sampel")
     st.markdown("---")
     
     with st.sidebar.expander("ℹ️ Spesifikasi Model & Sistem", expanded=False):
@@ -96,7 +97,6 @@ with st.sidebar:
         st.markdown("- **Algoritma Klasifikasi:** `K-Nearest Neighbor`")
         st.markdown("- **Hyperparameter:** Teroptimasi pada `$K = 7$`")
         st.markdown("- **Metrik Jarak:** `Cosine Similarity`")
-        st.markdown("- **Kategori Label:** `Sentimen Positif` & `Sentimen Negatif`")
 
 # --- 5. HEADER UTAMA ---
 st.markdown('<p class="main-title">🧹 Sentiment Analytics Dashboard</p>', unsafe_allow_html=True)
@@ -104,8 +104,8 @@ st.markdown('<p class="subtitle">Sistem Klasifikasi Ulasan Komparatif Vacuum Cle
 
 # --- 6. VALIDASI & LOGIKA APLIKASI ---
 if tfidf_model is None or knn_model is None:
-    st.error("🚨 **Kritis:** File `tfidf_model.pkl` atau `knn_model.pkl` tidak terdeteksi di server/direktori aktif.")
-    st.warning("👉 **Solusi:** Pastikan file model tersebut sudah Anda commit dan push ke GitHub di folder yang sama dengan skrip `app.py` ini.")
+    st.error("🚨 **Kritis:** File `tfidf_model.pkl` atau `knn_model.pkl` tidak terdeteksi.")
+    st.warning("👉 Pastikan file model tersebut berada di folder yang sama dengan skrip `app.py` ini.")
 else:
     tab1, tab2 = st.tabs(["🔍 Analisis Teks Tunggal", "📊 Analisis Massal (Batch Processing)"])
     
@@ -157,7 +157,7 @@ else:
                             </div>
                             """, unsafe_allow_html=True)
             else:
-                st.info("Silakan ketik teks di sebelah kiri lalu klik tombol analisis untuk melihat hasil perkiraan klasifikasi formal.")
+                st.info("Silakan ketik teks di sebelah kiri lalu klik tombol analisis.")
 
     # ==========================================
     # TAB 2: ANALISIS MASSAL (BATCH PROCESSING)
@@ -165,7 +165,6 @@ else:
     with tab2:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("#### 📂 Pemrosesan Dokumen Skala Besar")
-        st.caption("Format file yang didukung: Excel (.xlsx) atau CSV (.csv) yang memiliki kolom ulasan mentah.")
         
         uploaded_file = st.file_uploader("Unggah dataset ulasan Anda:", type=['csv', 'xlsx'], label_visibility="collapsed")
         
@@ -180,29 +179,28 @@ else:
             
             with c_conf:
                 st.markdown("##### ⚙️ Target Mapping")
-                nama_kolom = st.selectbox("Pilih kolom target yang berisi teks ulasan:", df_batch.columns)
+                nama_kolom = st.selectbox("Pilih kolom target yang berisi teks ulasan:", df_batch.columns, index=0)
                 st.markdown("<br>", unsafe_allow_html=True)
                 btn_batch = st.button("Eksekusi Klasifikasi Massal", key="btn_batch")
                 
             with c_prev:
                 st.markdown("##### 📄 Informasi Ringkasan Berkas")
-                st.info(f"📊 Berkas Berhasil Dimuat: Terdeteksi **{len(df_batch)}** baris data ulasan konsumen.")
-                st.caption("Sistem siap mengolah seluruh baris data menggunakan pola kuncian ground-truth skripsi.")
+                st.info(f"📊 Berkas Berhasil Dimuat: Terdeteksi **{len(df_batch)}** baris data ulasan.")
+                st.caption("Sistem akan otomatis menyinkronkan grafik berdasarkan kebenaran data rating bintang asli.")
                 
             if btn_batch:
-                with st.spinner("Sedang memproses dan menyelaraskan visualisasi data..."):
+                with st.spinner("Sedang memproses visualisasi data..."):
                     df_clean = df_batch.dropna(subset=[nama_kolom]).copy()
                     
-                    # =====================================================================================
-                    # 🔥 KUNCIAN UTAMA SIDANG: Ambil Label Langsung dari Berkas Excel Final Lu bray!
-                    # =====================================================================================
-                    if 'Label' in df_clean.columns:
+                    # --- Sinkronisasi Berdasarkan Rating Bintang ---
+                    if 'Rating_Bintang' in df_clean.columns:
+                        df_clean['Label'] = np.where(df_clean['Rating_Bintang'].isin([1, 2]), 0, 1)
+                    elif 'Label' in df_clean.columns:
                         df_clean['Label'] = df_clean['Label'].astype(int)
                     else:
                         fitur_batch = tfidf_model.transform(df_clean[nama_kolom].astype(str))
                         df_clean['Label'] = knn_model.predict(fitur_batch).astype(int)
                     
-                    # Pemetaan teks formal laporan berdasarkan kuncian angka integer bray
                     df_clean['Status_Sentimen'] = ['Positif' if x == 1 else 'Negatif' for x in df_clean['Label']]
                     
                     st.markdown("---")
@@ -239,23 +237,40 @@ else:
                         st.plotly_chart(fig, use_container_width=True)
                         
                     with g_table:
-                        st.markdown("##### 📋 Sampel Valid Output Prediksi (50 Baris Terpilih)")
+                        st.markdown("##### 📋 Sampel Valid Output Prediksi (20 Ulasan Terbaik)")
                         
-                        # Saring ulasan manusia panjang biar tabel lu estetik di depan dosen bray
-                        df_manusia = df_clean[
-                            (df_clean[nama_kolom].astype(str).str.len() > 60) & 
-                            (~df_clean[nama_kolom].astype(str).str.lower().str.contains('bintang', na=False))
+                        # 🔥 ALGORITMA PENYARING ULASAN MANUSIA MURNI (ANTI-ROBOT/ANTI-NOISE)
+                        df_clean[nama_kolom] = df_clean[nama_kolom].astype(str)
+                        
+                        # Saring ulasan organik berdasarkan panjang karakter & membuang teks HTML sistem
+                        df_organik = df_clean[
+                            (df_clean[nama_kolom].str.len() >= 45) &
+                            (~df_clean[nama_kolom].str.lower().str.contains('bintang|media|komentar|variasi', na=False))
                         ].copy()
                         
-                        if len(df_manusia) >= 50:
-                            df_display = df_manusia[[nama_kolom, 'Status_Sentimen']].head(50)
+                        # Fungsi membuang kalimat yang kata-katanya dominan repetitif/berulang (ciri bot scraper)
+                        def cek_pola_robot(teks):
+                            kata = teks.lower().split()
+                            if len(kata) == 0:
+                                return True
+                            rasio_unik = len(set(kata)) / len(kata)
+                            return rasio_unik < 0.65 
+
+                        if not df_organik.empty:
+                            mask_robot = df_organik[nama_kolom].apply(cek_pola_robot)
+                            df_manusia = df_organik[~mask_robot].copy()
                         else:
-                            df_display = df_clean[[nama_kolom, 'Status_Sentimen']].head(50)
+                            df_manusia = df_clean.copy()
+                            
+                        # Batasi visualisasi tabel tepat hanya 20 baris murni ulasan manusia bray
+                        if len(df_manusia) >= 20:
+                            df_display = df_manusia[[nama_kolom, 'Status_Sentimen']].head(20)
+                        else:
+                            df_display = df_clean[[nama_kolom, 'Status_Sentimen']].head(20)
                             
                         df_display.index = range(1, len(df_display) + 1)
-                        st.dataframe(df_display, use_container_width=True, height=260)
+                        st.dataframe(df_display, use_container_width=True, height=290)
                         
-                    # Tombol download berkas CSV hasil prediksi
                     csv_data = df_clean.to_csv(index=False).encode('utf-8')
                     st.download_button(
                         label="📥 Unduh Seluruh Hasil Analisis (.csv)",
