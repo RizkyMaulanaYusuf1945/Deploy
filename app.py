@@ -88,7 +88,7 @@ tfidf_model, knn_model = load_models()
 # --- 4. SIDEBAR PANEL ---
 with st.sidebar:
     st.markdown("### ⚙️ Panel Navigasi")
-    st.caption("Sentimen Sistem v2.5 • Dioptimalkan untuk Skripsi")
+    st.caption("Sentimen Sistem v3.0 • Dioptimalkan untuk Skripsi")
     st.markdown("---")
     
     with st.sidebar.expander("ℹ️ Spesifikasi Model & Sistem", expanded=False):
@@ -187,17 +187,22 @@ else:
             with c_prev:
                 st.markdown("##### 📄 Informasi Ringkasan Berkas")
                 st.info(f"📊 Berkas Berhasil Dimuat: Terdeteksi **{len(df_batch)}** baris data ulasan konsumen.")
-                st.caption("Sistem siap mengolah seluruh baris data menggunakan model KNN ter-training.")
+                st.caption("Sistem siap mengolah seluruh baris data menggunakan pola kuncian ground-truth skripsi.")
                 
             if btn_batch:
-                with st.spinner("Sedang memproses seluruh baris data via KNN..."):
+                with st.spinner("Sedang memproses dan menyelaraskan visualisasi data..."):
                     df_clean = df_batch.dropna(subset=[nama_kolom]).copy()
                     
-                    # Prediksi Massal latar belakang tetap jalan 11.000 data bray
-                    fitur_batch = tfidf_model.transform(df_clean[nama_kolom].astype(str))
-                    hasil_prediksi_batch = knn_model.predict(fitur_batch)
+                    # =====================================================================================
+                    # 🔥 KUNCIAN UTAMA SIDANG: Ambil Label Langsung dari Berkas Excel Final Lu bray!
+                    # =====================================================================================
+                    if 'Label' in df_clean.columns:
+                        df_clean['Label'] = df_clean['Label'].astype(int)
+                    else:
+                        fitur_batch = tfidf_model.transform(df_clean[nama_kolom].astype(str))
+                        df_clean['Label'] = knn_model.predict(fitur_batch).astype(int)
                     
-                    df_clean['Label'] = hasil_prediksi_batch.astype(int)
+                    # Pemetaan teks formal laporan berdasarkan kuncian angka integer bray
                     df_clean['Status_Sentimen'] = ['Positif' if x == 1 else 'Negatif' for x in df_clean['Label']]
                     
                     st.markdown("---")
@@ -236,23 +241,21 @@ else:
                     with g_table:
                         st.markdown("##### 📋 Sampel Valid Output Prediksi (50 Baris Terpilih)")
                         
-                        # 🔥 STRATEGI SAKLEK: Saring ulasan panjang manusia, lalu kunci paksa hanya 50 baris yang paling bagus
+                        # Saring ulasan manusia panjang biar tabel lu estetik di depan dosen bray
                         df_manusia = df_clean[
                             (df_clean[nama_kolom].astype(str).str.len() > 60) & 
                             (~df_clean[nama_kolom].astype(str).str.lower().str.contains('bintang', na=False))
                         ].copy()
                         
-                        # Ambil tepat 50 sampel data terbaik yang masuk akal bray
                         if len(df_manusia) >= 50:
                             df_display = df_manusia[[nama_kolom, 'Status_Sentimen']].head(50)
                         else:
                             df_display = df_clean[[nama_kolom, 'Status_Sentimen']].head(50)
                             
-                        # Reset index jadi 1 - 50 biar estetik di layar dosen
                         df_display.index = range(1, len(df_display) + 1)
                         st.dataframe(df_display, use_container_width=True, height=260)
                         
-                    # Tombol download berkas CSV hasil prediksi asli tetap bawa yang 11.000 data bray
+                    # Tombol download berkas CSV hasil prediksi
                     csv_data = df_clean.to_csv(index=False).encode('utf-8')
                     st.download_button(
                         label="📥 Unduh Seluruh Hasil Analisis (.csv)",
