@@ -70,11 +70,15 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. FUNGSI MEMUAT MODEL (CACHE) ---
+# --- 3. FUNGSI MEMUAT MODEL (CACHE - FIX JALUR SERVER CLOUD) ---
 @st.cache_resource
 def load_models():
-    tfidf_path = 'tfidf_model.pkl'
-    knn_path = 'knn_model.pkl'
+    # Ambil jalur folder tempat file app.py ini berada secara absolut bray!
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    
+    # Gabungkan folder root server dengan nama file pkl lu
+    tfidf_path = os.path.join(BASE_DIR, 'tfidf_model.pkl')
+    knn_path = os.path.join(BASE_DIR, 'knn_model.pkl')
     
     if os.path.exists(tfidf_path) and os.path.exists(knn_path):
         with open(tfidf_path, 'rb') as f_tfidf:
@@ -104,8 +108,8 @@ st.markdown('<p class="subtitle">Sistem Klasifikasi Ulasan Komparatif Vacuum Cle
 
 # --- 6. VALIDASI & LOGIKA APLIKASI ---
 if tfidf_model is None or knn_model is None:
-    st.error("🚨 **Kritis:** File `tfidf_model.pkl` atau `knn_model.pkl` tidak terdeteksi.")
-    st.warning("👉 Pastikan file model tersebut berada di folder yang sama dengan skrip `app.py` ini.")
+    st.error("🚨 **Kritis:** File `tfidf_model.pkl` atau `knn_model.pkl` tidak terdeteksi oleh sistem internet.")
+    st.warning("👉 Hubungkan folder project Anda ke GitHub dan pastikan kedua file tersebut sudah di-commit.")
 else:
     tab1, tab2 = st.tabs(["🔍 Analisis Teks Tunggal", "📊 Analisis Massal (Batch Processing)"])
     
@@ -192,7 +196,7 @@ else:
                 with st.spinner("Sedang memproses visualisasi data..."):
                     df_clean = df_batch.dropna(subset=[nama_kolom]).copy()
                     
-                    # --- Sinkronisasi Berdasarkan Rating Bintang ---
+                    # --- Sinkronisasi Kuncian Mutlak Berdasarkan Rating Bintang ---
                     if 'Rating_Bintang' in df_clean.columns:
                         df_clean['Label'] = np.where(df_clean['Rating_Bintang'].isin([1, 2]), 0, 1)
                     elif 'Label' in df_clean.columns:
@@ -239,7 +243,7 @@ else:
                     with g_table:
                         st.markdown("##### 📋 Sampel Valid Output Prediksi (20 Ulasan Terbaik)")
                         
-                        # 🔥 ALGORITMA PENYARING ULASAN MANUSIA MURNI (ANTI-ROBOT/ANTI-NOISE)
+                        # 🔥 ALGORITMA PENYARING ULASAN MANUSIA MURNI
                         df_clean[nama_kolom] = df_clean[nama_kolom].astype(str)
                         
                         # Saring ulasan organik berdasarkan panjang karakter & membuang teks HTML sistem
@@ -278,4 +282,3 @@ else:
                         file_name="hasil_analisis_sentimen_vacuum.csv",
                         mime="text/csv"
                     )
-
