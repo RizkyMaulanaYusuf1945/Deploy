@@ -1,6 +1,6 @@
 streamlit
 pandas
 pickle-mixin
-scikit-learn
 plotly
 openpyxl
+scikit-learn==1.6.1
